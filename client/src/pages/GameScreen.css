@@ -1,0 +1,80 @@
+/* src/pages/GameScreen.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #f5f5f5;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.buttons-container {
+  margin-bottom: 20px;
+}
+
+.option-label {
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.button {
+  font-size: 1rem;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  background-color: #007bff;
+  cursor: pointer;
+  margin: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.question {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.option-list {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  max-width: 600px;
+}
+
+.option-item {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.option-item:hover {
+  background-color: #e0e0e0;
+}
+
+.option-item.selected {
+  background-color: yellow;
+}
+
+.option-item.correct {
+  background-color: #d4edda;
+}
+
+.option-item.incorrect {
+  background-color: #f8d7da;
+}
