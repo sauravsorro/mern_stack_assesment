@@ -212,7 +212,10 @@ const GameScreen = () => {
 
   return (
     <div className="container">
-      <h1>Level : {gameState.playerData?.currentLevel + 1}</h1>
+      <h1>
+        Prize - {calculatePrize(gameState.playerData?.currentLevel + 1)} Rs
+      </h1>
+      <h2>Level : {gameState.playerData?.currentLevel + 1}</h2>
       <div className="buttons-container">
         <button
           disabled={
@@ -263,8 +266,7 @@ const GameScreen = () => {
 
       <h1 className="question">
         Question {gameState.playerData?.currentLevel + 1}:{" "}
-        {gameState.currentQuestion} (For Prize -{" "}
-        {calculatePrize(gameState.playerData?.currentLevel + 1)} Rs)
+        {gameState.currentQuestion}
       </h1>
       <ul className="option-list">
         {gameState.currentOptions?.map((option, index) => (
