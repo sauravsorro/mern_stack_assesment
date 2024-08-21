@@ -16,7 +16,7 @@ const Home = () => {
 
     try {
       const { data } = await axios.post(`${API_URL}${API_ROUTES.startGame}`, {
-        name,
+        name: name?.trim(),
       });
       localStorage.setItem("playerId", data.data._id);
       appToaster("success", data.message);
