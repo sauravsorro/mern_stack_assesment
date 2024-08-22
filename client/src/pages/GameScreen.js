@@ -6,25 +6,37 @@ import { API_ROUTES, API_URL, ROUTES, STATUS } from "../constants";
 import "./GameScreen.css";
 
 const optionLabels = ["A", "B", "C", "D"];
+const prizes = [
+  1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
+];
 
 const GameScreen = () => {
   const navigate = useNavigate();
   const [gameState, setGameState] = useState({
     playerData: null,
     currentQuestion: null,
-    currentOptions: null,
+    currentOptions: [],
     correctAnswer: null,
     questionId: null,
     selectedOption: null,
     isAnswerLocked: false,
   });
 
+  useEffect(() => {
+    const playerId = localStorage.getItem("playerId");
+    if (!playerId) {
+      navigate(ROUTES.default);
+    } else {
+      fetchGameData(playerId);
+    }
+  }, []);
+
   const fetchGameData = async (playerId) => {
     try {
       const playerResponse = await axios.get(
         `${API_URL}${API_ROUTES.players}/${playerId}`
       );
-      const playerData = playerResponse.data.data;
+      const playerData = playerResponse?.data?.data;
 
       if (playerData.status === STATUS.Forfeited) {
         localStorage.removeItem("playerId");
@@ -36,13 +48,11 @@ const GameScreen = () => {
       const questionResponse = await axios.get(
         `${API_URL}${API_ROUTES.questions}`,
         {
-          params: {
-            page: playerData.currentLevel + 1,
-          },
+          params: { page: playerData?.currentLevel + 1 },
         }
       );
-      const questionData = questionResponse?.data?.data;
 
+      const questionData = questionResponse?.data?.data;
       setGameState({
         playerData,
         currentQuestion: questionData?.question,
@@ -53,48 +63,35 @@ const GameScreen = () => {
         isAnswerLocked: false,
       });
     } catch (error) {
-      appToaster(
-        "error",
-        error?.response?.data?.message || "An error occurred. Please try again."
-      );
+      handleError(error);
     }
   };
 
-  useEffect(() => {
-    const playerId = localStorage.getItem("playerId");
-    if (!playerId) {
-      navigate(ROUTES.default);
-    } else {
-      fetchGameData(playerId);
-    }
-  }, []);
-
   const handleAnswerSelection = (option) => {
-    setGameState((prevState) => ({
-      ...prevState,
-      selectedOption: option,
-    }));
+    if (!gameState?.isAnswerLocked) {
+      setGameState((prevState) => ({ ...prevState, selectedOption: option }));
+    }
   };
 
   const lockAnswer = async () => {
-    setGameState((prevState) => ({
-      ...prevState,
-      isAnswerLocked: true,
-    }));
+    setGameState((prevState) => ({ ...prevState, isAnswerLocked: true }));
+    const isCorrect = gameState?.correctAnswer === gameState?.selectedOption;
 
-    if (gameState.correctAnswer !== gameState.selectedOption) {
-      await updatePlayerStatus(
-        gameState.playerData.currentLevel >= 7
+    if (!isCorrect) {
+      const prizeMoney =
+        gameState?.playerData?.currentLevel >= 7
           ? 1000000
-          : gameState.playerData.currentLevel >= 4
+          : gameState?.playerData?.currentLevel >= 4
           ? 1000
-          : 0,
+          : 0;
+      await updatePlayerStatus(
+        prizeMoney,
         STATUS.Completed,
         "Your answer is wrong... Better luck next time"
       );
     } else {
       await updatePlayerStatus(
-        calculatePrize(gameState.playerData.currentLevel + 1),
+        calculatePrize(gameState?.playerData?.currentLevel + 1),
         STATUS.InProgress,
         "Proceeding to the next question..."
       );
@@ -105,7 +102,7 @@ const GameScreen = () => {
     try {
       const playerId = localStorage.getItem("playerId");
       await axios.patch(`${API_URL}${API_ROUTES.players}/${playerId}`, {
-        currentLevel: gameState.playerData.currentLevel + 1,
+        currentLevel: gameState?.playerData?.currentLevel + 1,
         prizeMoney,
         status,
       });
@@ -114,13 +111,9 @@ const GameScreen = () => {
         localStorage.removeItem("playerId");
         setTimeout(() => navigate(ROUTES.leaderboard), 2000);
       }
-
       appToaster(status === STATUS.Completed ? "error" : "success", message);
     } catch (error) {
-      appToaster(
-        "error",
-        error?.response?.data?.message || "An error occurred. Please try again."
-      );
+      handleError(error);
     }
   };
 
@@ -134,7 +127,7 @@ const GameScreen = () => {
       if (endpoint === API_ROUTES.useFifty) {
         setGameState((prevState) => ({
           ...prevState,
-          currentOptions: response.data.data,
+          currentOptions: response?.data?.data,
         }));
       } else {
         appToaster(
@@ -143,10 +136,7 @@ const GameScreen = () => {
         );
       }
     } catch (error) {
-      appToaster(
-        "error",
-        error?.response?.data?.message || "An error occurred. Please try again."
-      );
+      handleError(error);
     }
   };
 
@@ -160,19 +150,11 @@ const GameScreen = () => {
       const playerId = localStorage.getItem("playerId");
       fetchGameData(playerId);
     } catch (error) {
-      appToaster(
-        "error",
-        error?.response?.data?.message || "An error occurred. Please try again."
-      );
+      handleError(error);
     }
   };
 
-  const calculatePrize = (level) => {
-    const prizes = [
-      1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
-    ];
-    return prizes[level - 1];
-  };
+  const calculatePrize = (level) => prizes[level - 1];
 
   const quitGame = async () => {
     try {
@@ -184,10 +166,7 @@ const GameScreen = () => {
       localStorage.removeItem("playerId");
       navigate(ROUTES.leaderboard);
     } catch (error) {
-      appToaster(
-        "error",
-        error?.response?.data?.message || "An error occurred. Please try again."
-      );
+      handleError(error);
     }
   };
 
@@ -195,31 +174,45 @@ const GameScreen = () => {
     try {
       const playerId = localStorage.getItem("playerId");
       await axios.patch(`${API_URL}${API_ROUTES.players}/${playerId}`, {
-        currentLevel: gameState.playerData.currentLevel + 1,
-        prizeMoney: calculatePrize(gameState.playerData.currentLevel + 1),
+        currentLevel: gameState?.playerData?.currentLevel + 1,
+        prizeMoney: calculatePrize(gameState?.playerData?.currentLevel + 1),
         status: STATUS.Completed,
       });
       appToaster("success", "Congratulations! You've completed the game.");
       localStorage.removeItem("playerId");
       navigate(ROUTES.leaderboard);
     } catch (error) {
-      appToaster(
-        "error",
-        error?.response?.data?.message || "An error occurred. Please try again."
-      );
+      handleError(error);
     }
+  };
+
+  const handleError = (error) => {
+    appToaster(
+      "error",
+      error?.response?.data?.message || "An error occurred. Please try again."
+    );
+  };
+
+  const getOptionClassName = (option) => {
+    if (gameState.isAnswerLocked) {
+      if (option === gameState.correctAnswer) return "correct";
+      if (option === gameState.selectedOption) return "incorrect";
+    } else if (option === gameState.selectedOption) {
+      return "selected";
+    }
+    return "";
   };
 
   return (
     <div className="container">
       <h1>
-        Prize - {calculatePrize(gameState.playerData?.currentLevel + 1)} Rs
+        Prize - {calculatePrize(gameState?.playerData?.currentLevel + 1)} Rs
       </h1>
-      <h2>Level : {gameState.playerData?.currentLevel + 1}</h2>
+      <h2>Level: {gameState?.playerData?.currentLevel + 1}</h2>
       <div className="buttons-container">
         <button
           disabled={
-            gameState.playerData?.usedFiftyFifty || gameState.isAnswerLocked
+            gameState?.playerData?.usedFiftyFifty || gameState?.isAnswerLocked
           }
           onClick={() => lifelineFunc(API_ROUTES.useFifty)}
           className="button"
@@ -228,7 +221,7 @@ const GameScreen = () => {
         </button>
         <button
           disabled={
-            gameState.playerData?.usedAskTheAI || gameState.isAnswerLocked
+            gameState?.playerData?.usedAskTheAI || gameState?.isAnswerLocked
           }
           onClick={() => lifelineFunc(API_ROUTES.useAskTheAi)}
           className="button"
@@ -236,15 +229,15 @@ const GameScreen = () => {
           Use Ask the AI
         </button>
         <button
-          disabled={!gameState.selectedOption || gameState.isAnswerLocked}
+          disabled={!gameState?.selectedOption || gameState?.isAnswerLocked}
           onClick={lockAnswer}
           className="button"
         >
           Lock the Answer
         </button>
-        {gameState.playerData?.currentLevel + 1 === 10 ? (
+        {gameState?.playerData?.currentLevel + 1 === 10 ? (
           <button
-            disabled={!gameState.isAnswerLocked}
+            disabled={!gameState?.isAnswerLocked}
             onClick={completeGame}
             className="button"
           >
@@ -252,7 +245,7 @@ const GameScreen = () => {
           </button>
         ) : (
           <button
-            disabled={!gameState.isAnswerLocked}
+            disabled={!gameState?.isAnswerLocked}
             onClick={proceedToNextQuestion}
             className="button"
           >
@@ -265,27 +258,15 @@ const GameScreen = () => {
       </div>
 
       <h1 className="question">
-        Question {gameState.playerData?.currentLevel + 1}:{" "}
-        {gameState.currentQuestion}
+        Question {gameState?.playerData?.currentLevel + 1}:{" "}
+        {gameState?.currentQuestion}
       </h1>
       <ul className="option-list">
-        {gameState.currentOptions?.map((option, index) => (
+        {gameState?.currentOptions?.map((option, index) => (
           <li
             key={index}
-            className={`option-item ${
-              gameState.isAnswerLocked
-                ? option === gameState.correctAnswer
-                  ? "correct"
-                  : option === gameState.selectedOption
-                  ? "incorrect"
-                  : ""
-                : gameState.selectedOption === option
-                ? "selected"
-                : ""
-            }`}
-            onClick={() =>
-              !gameState.isAnswerLocked && handleAnswerSelection(option)
-            }
+            className={`option-item ${getOptionClassName(option)}`}
+            onClick={() => handleAnswerSelection(option)}
           >
             <span className="option-label">{optionLabels[index]}:</span>{" "}
             {option}
